@@ -1,0 +1,1025 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Terminus: every coding agent, one memory</title>
+<meta name="description" content="One memory for all your coding agents. Claude, Codex, Gemini and 40 more share what they learn about your project, in Terminus or in Claude Code, Codex, Cursor and VS Code.">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon.png">
+<style>
+/* ---------- Tokens ---------- */
+:root {
+  color-scheme: light;
+  --bg: #fafafa;
+  --bg-2: #f2f2f3;
+  --surface: #ffffff;
+  --text: #1b1b1d;
+  --text-2: color-mix(in oklch, var(--text) 64%, var(--bg));
+  --text-3: color-mix(in oklch, var(--text) 50%, var(--bg));
+  --line: color-mix(in oklch, var(--text) 10%, transparent);
+  --line-strong: color-mix(in oklch, var(--text) 18%, transparent);
+
+  /* One accent (the coral of the app icon) and one cooler secondary (its blue dot). */
+  /* Same as the app (design.css): monochrome. Silver/graphite accent, grey secondary. */
+  --accent: #3b3c41;
+  --cool: #77787d;
+  --on-accent: #ffffff;
+
+  /* Category hues for cards */
+  --hue-violet: var(--accent);
+  --hue-amber: var(--accent);
+  --hue-orange: var(--accent);
+  --hue-emerald: var(--cool);
+  --hue-blue: var(--cool);
+  --hue-indigo: var(--cool);
+
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --gutter: max(20px, env(safe-area-inset-left, 0px));
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #000000;
+    --bg-2: #1d1d1f;
+    --surface: #141415;
+    --text: #f5f5f7;
+    --accent: #d4d6db;
+    --cool: #8e9097;
+    --on-accent: #1d1d1f;
+  }
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; overscroll-behavior-x: none; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.55 var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  max-width: 100%;
+}
+/* Wide decorative layers (glows, the scrolling agent rows) must never make the page scroll sideways. */
+main, section, header.nav, footer { max-width: 100vw; overflow-x: clip; }
+img { max-width: 100%; }
+a { color: inherit; }
+h1, h2, h3 { font-weight: 500; margin: 0; letter-spacing: -0.025em; line-height: 1.08; }
+p { margin: 0; }
+code { font-family: var(--mono); font-size: 0.88em; }
+.wrap { width: min(1120px, 100%); margin-inline: auto; padding-inline: var(--gutter); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+
+/* ---------- Ambient hues fixed to the page edges, drifting with scroll ---------- */
+.ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.ambient i {
+  position: absolute; top: 10vh; width: 46vmax; height: 46vmax; border-radius: 50%;
+  filter: blur(90px); opacity: .9;
+}
+.ambient .al { left: -30vmax; background: radial-gradient(closest-side, color-mix(in oklch, var(--accent) 16%, transparent), transparent); }
+.ambient .ar { right: -30vmax; top: 40vh; background: radial-gradient(closest-side, color-mix(in oklch, var(--cool) 16%, transparent), transparent); }
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .ambient .al { animation: drift-l linear both; animation-timeline: scroll(root); }
+    .ambient .ar { animation: drift-r linear both; animation-timeline: scroll(root); }
+  }
+}
+@keyframes drift-l { to { transform: translateY(55vh) scale(1.25); filter: blur(90px) hue-rotate(38deg); } }
+@keyframes drift-r { to { transform: translateY(-35vh) scale(.85); filter: blur(90px) hue-rotate(-38deg); } }
+
+main, header.nav, footer { position: relative; z-index: 2; }
+
+/* ---------- Nav ---------- */
+header.nav {
+  position: sticky; top: 0; z-index: 20;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: color-mix(in oklch, var(--bg) 72%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  backdrop-filter: saturate(180%) blur(18px);
+  border-bottom: 1px solid var(--line);
+}
+.nav .wrap { display: flex; align-items: center; gap: 28px; height: 56px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
+.brand img { width: 28px; height: 28px; }
+.nav ul { display: flex; gap: 24px; list-style: none; margin: 0 0 0 auto; padding: 0; font-size: 14px; }
+.nav ul a { text-decoration: none; color: var(--text-2); transition: color .2s; }
+.nav ul a:hover { color: var(--text); }
+@media (max-width: 680px) { .nav ul { display: none; } .nav .btn { margin-left: auto; } }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  height: 44px; padding: 0 22px; border-radius: 999px;
+  font: 500 16px/1 var(--font); text-decoration: none; white-space: nowrap;
+  transition: transform .25s var(--ease), background-color .2s, box-shadow .25s;
+}
+.btn svg { width: 17px; height: 17px; flex: none; }
+.btn-primary {
+  background: var(--text); color: var(--bg);
+  box-shadow: 0 8px 28px -10px color-mix(in oklch, var(--accent) 70%, transparent);
+}
+.beta-steps { margin: 26px auto 0; max-width: 34em; padding-left: 1.4em; text-align: left; color: var(--text-2); font-size: 16px; line-height: 1.5; }
+.beta-steps li { margin-top: 8px; } .beta-steps strong { color: var(--text); }
+.fine a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+
+.invite-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; }
+.invite-modal[hidden] { display: none !important; }
+.im-back { position: absolute; inset: 0; background: rgba(0, 0, 0, .6); backdrop-filter: blur(6px); animation: im-fade .2s var(--ease); }
+.im-card { position: relative; width: min(600px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 30px 80px rgba(0, 0, 0, .45); animation: im-pop .25s var(--ease); text-align: left; }
+.im-body { padding: clamp(22px, 4vw, 34px); }
+.im-card h3 { font-size: 24px; letter-spacing: -.02em; color: var(--text); }
+.im-sub { margin-top: 6px; color: var(--text-2); font-size: 15px; }
+.im-x { position: absolute; top: 12px; right: 14px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: var(--text-2); font-size: 22px; cursor: pointer; }
+.im-x:hover { background: var(--bg-2); color: var(--text); }
+.im-x:focus-visible { outline: 2px solid var(--accent); }
+@keyframes im-fade { from { opacity: 0 } }
+@keyframes im-pop { from { opacity: 0; transform: translateY(10px) scale(.98) } }
+body.im-open { overflow: hidden; }
+.invite-form { margin-top: 22px; display: flex; flex-direction: column; gap: 16px; }
+.invite-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text-2); }
+.invite-form .if-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .invite-form .if-row { grid-template-columns: 1fr; } }
+.invite-form input:not([type=checkbox]), .invite-form textarea { font: inherit; font-size: 15px; color: var(--text); background: color-mix(in oklch, var(--bg-2) 70%, transparent); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 11px 13px; outline: none; transition: border-color .2s var(--ease); }
+.invite-form input:focus-visible, .invite-form textarea:focus-visible { border-color: var(--accent); }
+.invite-form .bad { border-color: oklch(0.65 0.17 25) !important; }
+.invite-form textarea { resize: vertical; min-height: 84px; }
+.invite-form fieldset { border: 0; padding: 0; margin: 0; }
+.invite-form legend { font-size: 14px; color: var(--text-2); margin-bottom: 8px; }
+.if-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.if-chips.bad span { border-color: oklch(0.65 0.17 25); }
+.if-chip { flex-direction: row !important; cursor: pointer; }
+.if-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.if-chip span { padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--text-2); font-size: 14px; transition: all .2s var(--ease); }
+.if-chip input:checked + span { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.if-chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.invite-form .if-check { flex-direction: row; align-items: flex-start; gap: 9px; }
+.invite-form .if-check input { margin-top: 3px; accent-color: var(--accent); }
+.if-err { font-size: 13px; color: oklch(0.68 0.17 25); min-height: 0; }
+.if-err:empty { display: none; }
+.if-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.invite-form button { align-self: flex-start; }
+.if-status { margin: 0; font-size: 15px; color: var(--text); min-height: 1.2em; }
+.if-status.err { color: oklch(0.68 0.17 25); }
+.invite-done strong { display: block; font-size: 20px; color: var(--text); }
+.invite-done p { margin-top: 8px; color: var(--text-2); }
+.invite-done .btn { margin-top: 18px; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 34px -10px color-mix(in oklch, var(--accent) 85%, transparent); }
+.btn-ghost { color: var(--text); background: color-mix(in oklch, var(--text) 6%, transparent); }
+.btn-ghost:hover { background: color-mix(in oklch, var(--text) 10%, transparent); }
+.btn-sm { height: 34px; padding: 0 16px; font-size: 14px; }
+
+/* ---------- Atmosphere (hero and final CTA) ---------- */
+.atmos {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
+.atmos.mirrored { -webkit-mask-image: linear-gradient(to top, #000 55%, transparent); mask-image: linear-gradient(to top, #000 55%, transparent); }
+.atmos .dots {
+  position: absolute; inset: 0;
+  background-image: radial-gradient(color-mix(in oklch, var(--text) 16%, transparent) 1px, transparent 1.2px);
+  background-size: 28px 28px; background-attachment: fixed;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%);
+}
+.blob { position: absolute; border-radius: 50%; filter: blur(70px); will-change: transform; }
+.b1 { width: 520px; height: 420px; left: 18%; top: -120px; background: color-mix(in oklch, var(--accent) 26%, transparent); animation: float-a 26s var(--ease) infinite alternate; }
+.b2 { width: 460px; height: 460px; right: 14%; top: 60px; background: color-mix(in oklch, var(--cool) 22%, transparent); animation: float-b 30s var(--ease) infinite alternate; }
+.b3 { width: 380px; height: 300px; left: 42%; top: 320px; background: color-mix(in oklch, var(--hue-violet) 14%, transparent); animation: float-c 22s var(--ease) infinite alternate; }
+.b4 { width: 300px; height: 720px; left: -170px; top: 40px; background: color-mix(in oklch, var(--accent) 18%, transparent); animation: float-b 28s var(--ease) infinite alternate-reverse; }
+.b5 { width: 300px; height: 720px; right: -170px; top: 120px; background: color-mix(in oklch, var(--cool) 18%, transparent); animation: float-a 24s var(--ease) infinite alternate-reverse; }
+@keyframes float-a { to { transform: translate(60px, 40px) scale(1.12); } }
+@keyframes float-b { to { transform: translate(-50px, 50px) scale(.9); } }
+@keyframes float-c { to { transform: translate(40px, -40px) scale(1.18); } }
+
+/* ---------- Hero ---------- */
+.hero { position: relative; isolation: isolate; padding-block: clamp(64px, 11vw, 120px) 40px; overflow: hidden; }
+/* Pointer light: a soft spotlight, and dots that light up under the cursor. Both sit below the content. */
+.hero::before, .hero::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  opacity: 0; transition: opacity .5s var(--ease);
+}
+.hero::before { background: radial-gradient(560px circle at var(--mx, 50%) var(--my, 30%), color-mix(in oklch, var(--accent) 17%, transparent), transparent 70%); }
+.hero::after {
+  background-image: radial-gradient(color-mix(in oklch, var(--accent) 75%, transparent) 1.2px, transparent 1.6px);
+  background-size: 28px 28px; background-attachment: fixed;
+  -webkit-mask-image: radial-gradient(230px circle at var(--mx, 50%) var(--my, 30%), #000, transparent 70%);
+  mask-image: radial-gradient(230px circle at var(--mx, 50%) var(--my, 30%), #000, transparent 70%);
+}
+.hero.is-glowing::before, .hero.is-glowing::after { opacity: 1; }
+.hero > .wrap { position: relative; z-index: 2; text-align: center; }
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px 6px 10px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--text-2);
+  background: color-mix(in oklch, var(--surface) 70%, transparent); border: 1px solid var(--line);
+}
+.eyebrow b { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent) 20%, transparent); }
+.hero h1 { font-size: clamp(44px, 8.4vw, 96px); letter-spacing: -0.045em; margin: 26px auto 0; max-width: 11ch; }
+.sweep {
+  background-image: linear-gradient(100deg, var(--accent) 38%, color-mix(in oklch, var(--accent) 25%, #fff) 50%, var(--accent) 62%);
+  background-size: 260% 100%; background-position: 0 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.lede { margin: 26px auto 0; max-width: 37em; font-size: clamp(17px, 2vw, 21px); color: var(--text-2); line-height: 1.5; }
+.cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 36px; }
+.fine { margin-top: 16px; font-size: 13px; color: var(--text-3); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise { opacity: 0; transform: translateY(16px); animation: rise 900ms var(--ease) forwards; animation-delay: var(--d, 0ms); }
+  .sweep { background-position: 100% 0; animation: sweep 1.9s 1s var(--ease) forwards; }
+}
+@keyframes rise { to { opacity: 1; transform: none; } }
+@keyframes sweep { to { background-position: 0 0; } }
+
+/* ---------- Hero stage: a window of the app ---------- */
+.stage { position: relative; z-index: 2; margin: 64px auto 0; max-width: 880px; }
+.float { animation: bob 7s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(-8px); } 50% { transform: translateY(8px); } }
+.window {
+  text-align: left; border-radius: var(--r-lg); overflow: hidden;
+  background: color-mix(in oklch, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 40px 100px -40px color-mix(in oklch, var(--text) 45%, transparent), 0 0 0 1px color-mix(in oklch, var(--bg) 40%, transparent) inset;
+}
+.titlebar { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--text-3); }
+.titlebar i { width: 11px; height: 11px; border-radius: 50%; background: var(--line-strong); }
+.titlebar i { background: color-mix(in oklch, var(--text) 22%, transparent); }
+.titlebar span { margin: 0 auto; transform: translateX(-24px); }
+.thread { padding: 22px clamp(16px, 3vw, 28px) 8px; display: grid; gap: 14px; font-size: 14.5px; line-height: 1.5; }
+.msg { display: grid; grid-template-columns: 24px 1fr; gap: 10px; }
+.av { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #fff; }
+.av.you { background: color-mix(in oklch, var(--text) 75%, transparent); color: var(--bg); }
+.av.claude { background: #c9cbd0; }
+.av.gemini { background: #8e9097; }
+.who { font-size: 12.5px; font-weight: 600; color: var(--text-2); margin-bottom: 2px; }
+.who em { font-style: normal; font-weight: 400; color: var(--text-3); margin-left: 6px; }
+.chip { display: inline-flex; gap: 8px; align-items: center; margin-top: 8px; padding: 4px 10px; border-radius: 8px; font: 12px var(--mono); background: var(--bg-2); border: 1px solid var(--line); }
+.chip .add { color: oklch(0.6 0.15 150); } .chip .del { color: oklch(0.6 0.18 25); }
+.note {
+  display: flex; gap: 9px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; font-size: 13px; color: var(--text-2);
+  background: color-mix(in oklch, var(--hue-amber) 10%, transparent);
+  border: 1px solid color-mix(in oklch, var(--hue-amber) 26%, transparent);
+}
+.note b { color: var(--hue-amber); font-weight: 600; }
+.joined { display: flex; align-items: center; gap: 12px; font-size: 12.5px; color: var(--text-3); }
+.joined::before, .joined::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.joined strong { color: var(--cool); font-weight: 500; }
+.typing::after { content: "▍"; color: var(--cool); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.composer { margin: 10px clamp(12px, 2.5vw, 22px) 18px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--bg); display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-3); }
+.composer .pills { margin-left: auto; display: flex; gap: 6px; }
+.pill { padding: 3px 9px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--text-2); }
+.pill.on { color: var(--text); border-color: color-mix(in oklch, var(--cool) 50%, transparent); background: color-mix(in oklch, var(--cool) 12%, transparent); }
+@media (max-width: 560px) { .composer .pills .pill:nth-child(n+3) { display: none; } }
+
+.plan { padding: 9px 12px; border-radius: 12px; background: color-mix(in oklch, var(--accent) 9%, transparent); border: 1px solid color-mix(in oklch, var(--accent) 22%, transparent); font-size: 13px; }
+.plan-head { display: flex; gap: 8px; align-items: baseline; }
+.plan-head span { color: var(--text-3); font-size: 12px; }
+.plan-note { display: flex; gap: 7px; align-items: baseline; margin-top: 4px; color: var(--text-2); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+.dot.cla { background: #c9cbd0; } .dot.gem { background: #9fa1a7; }
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.col { border-radius: 12px; border: 1px solid var(--line); background: var(--bg-2); padding: 0 0 10px; font-size: 13.5px; min-width: 0; }
+.col-head { display: flex; align-items: center; gap: 7px; padding: 8px 11px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 12.5px; }
+.col-head em { margin-left: auto; font-style: normal; font-weight: 400; font-size: 11.5px; }
+.col-head .done { color: var(--text-3); } .col-head .busy { color: var(--cool); }
+.col-task { padding: 6px 11px; color: var(--text-2); font-size: 12px; border-bottom: 1px solid var(--line); }
+.col p { margin: 8px 11px 0; }
+.col .chip { margin: 8px 11px 0; }
+@media (max-width: 560px) { .cols { grid-template-columns: 1fr; } }
+.modes .n { font: 600 12px var(--font); color: var(--glow); letter-spacing: 0.02em; text-transform: uppercase; }
+.modes h3 { margin-top: 12px; }
+
+/* ---------- Stats ---------- */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 72px auto 0; max-width: 880px; position: relative; z-index: 2; }
+.stat { text-align: center; padding: 18px 8px; }
+.stat strong { display: block; font-size: clamp(34px, 5vw, 48px); font-weight: 500; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 14px; color: var(--text-2); }
+@media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---------- Sections ---------- */
+section { position: relative; }
+.section { padding-block: clamp(80px, 12vw, 140px) 0; }
+.kicker { font-size: 14px; font-weight: 600; color: var(--accent); letter-spacing: 0; }
+.section h2 { font-size: clamp(34px, 5.4vw, 60px); letter-spacing: -0.04em; margin-top: 12px; max-width: 16ch; }
+.section .sub { margin-top: 18px; font-size: clamp(17px, 1.8vw, 20px); color: var(--text-2); max-width: 36em; }
+.center { text-align: center; } .center h2, .center .sub { margin-inline: auto; }
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% cover 28%; }
+  }
+}
+@keyframes reveal { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Glow cards ---------- */
+.glow-card {
+  --glow: var(--accent);
+  position: relative; isolation: isolate; overflow: hidden;
+  border-radius: var(--r-lg); padding: 28px;
+  background: color-mix(in oklch, var(--surface) 80%, transparent);
+  border: 1px solid var(--line);
+  transition: transform .45s var(--ease), border-color .3s, box-shadow .45s var(--ease);
+}
+.glow-card::before, .glow-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0; opacity: 0; transition: opacity .4s var(--ease); }
+.glow-card::before { background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--glow) 16%, transparent), transparent 70%); }
+.glow-card::after {
+  padding: 1px;
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklch, var(--glow) 85%, transparent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.glow-card.is-glowing::before, .glow-card.is-glowing::after { opacity: 1; }
+.glow-card > * { position: relative; z-index: 2; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .glow-card:hover { transform: translateY(-3px) scale(1.01); box-shadow: 0 24px 60px -30px color-mix(in oklch, var(--glow) 55%, transparent); }
+}
+.g-violet { --glow: var(--hue-violet); } .g-amber { --glow: var(--hue-amber); } .g-orange { --glow: var(--hue-orange); }
+.g-emerald { --glow: var(--hue-emerald); } .g-blue { --glow: var(--hue-blue); } .g-indigo { --glow: var(--hue-indigo); }
+
+.icon-chip {
+  width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+  color: var(--glow); background: color-mix(in oklch, var(--glow) 14%, transparent);
+  border: 1px solid color-mix(in oklch, var(--glow) 24%, transparent);
+}
+.icon-chip svg { width: 20px; height: 20px; }
+
+/* ---------- How it works ---------- */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 56px; counter-reset: step; }
+.step .n { font: 500 13px var(--mono); color: var(--glow); }
+.step h3 { font-size: 22px; margin-top: 18px; }
+.step p { margin-top: 10px; color: var(--text-2); font-size: 16px; }
+@media (max-width: 820px) { .steps { grid-template-columns: 1fr; } }
+
+/* ---------- Features ---------- */
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 56px; }
+.grid h3 { font-size: 21px; margin-top: 22px; }
+.grid p { margin-top: 10px; color: var(--text-2); font-size: 16px; }
+@media (max-width: 920px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+
+/* ---------- Agents ---------- */
+.agents { margin-top: 48px; display: grid; gap: 28px; }
+.agents h3 { font-size: 14px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tag { padding: 8px 14px; border-radius: 999px; font-size: 15px; background: color-mix(in oklch, var(--surface) 80%, transparent); border: 1px solid var(--line); }
+.tag.more { color: var(--text-2); border-style: dashed; }
+
+/* ---------- Helper panel (MCP) ---------- */
+.panel {
+  margin-top: 56px; border-radius: var(--r-xl); padding: clamp(24px, 4vw, 44px);
+  background:
+    radial-gradient(520px 320px at 0% 0%, color-mix(in oklch, var(--accent) 14%, transparent), transparent 70%),
+    radial-gradient(520px 320px at 100% 100%, color-mix(in oklch, var(--cool) 14%, transparent), transparent 70%),
+    var(--surface);
+  border: 1px solid var(--line);
+  display: grid; grid-template-columns: 1fr 1.25fr; gap: clamp(24px, 4vw, 48px); align-items: start;
+}
+.panel .icon-chip { --glow: var(--accent); }
+.panel h3 { font-size: clamp(26px, 3vw, 34px); margin-top: 20px; letter-spacing: -0.03em; }
+.panel > div > p { margin-top: 12px; color: var(--text-2); }
+.panel .clients { margin-top: 18px; font-size: 14px; color: var(--text-3); }
+.tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tool { padding: 18px; border-radius: var(--r-md); background: color-mix(in oklch, var(--bg-2) 70%, transparent); border: 1px solid var(--line); }
+.tool code { font-size: 13px; color: var(--text); }
+.tool p { margin-top: 6px; font-size: 14.5px; color: var(--text-2); line-height: 1.45; }
+@media (max-width: 820px) { .panel { grid-template-columns: 1fr; } }
+@media (max-width: 460px) { .tools { grid-template-columns: 1fr; } }
+
+/* ---------- Download ---------- */
+.download { position: relative; isolation: isolate; margin-top: clamp(80px, 12vw, 140px); padding-block: clamp(80px, 12vw, 140px); overflow: hidden; }
+.download > .wrap { position: relative; z-index: 2; text-align: center; }
+.download .icon { width: 112px; height: 112px; filter: drop-shadow(0 18px 40px color-mix(in oklch, var(--accent) 35%, transparent)); }
+.download h2 { font-size: clamp(38px, 6vw, 68px); letter-spacing: -0.045em; margin-top: 26px; }
+.download .sub { margin: 16px auto 0; color: var(--text-2); max-width: 32em; font-size: clamp(17px, 1.8vw, 20px); }
+.reqs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 880px; margin: 48px auto 0; text-align: left; }
+.req { padding: 18px; }
+.req strong { display: block; font-size: 15px; font-weight: 600; }
+.req span { display: block; margin-top: 4px; font-size: 14px; color: var(--text-2); line-height: 1.45; }
+@media (max-width: 820px) { .reqs { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 460px) { .reqs { grid-template-columns: 1fr; } }
+
+footer { border-top: 1px solid var(--line); padding-block: 28px calc(28px + env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--text-3); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; }
+
+
+/* ---------- Hero mark ---------- */
+.hero-mark { display: block; width: 84px; height: 84px; margin: 0 auto 22px; filter: drop-shadow(0 16px 40px color-mix(in oklch, var(--accent) 40%, transparent)); }
+
+/* ---------- Handoff rail ---------- */
+.handoff { position: relative; margin-top: 56px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 36px 28px 28px; border-radius: var(--r-xl); border: 1px solid var(--line); background: color-mix(in oklch, var(--surface) 70%, transparent); }
+.rail { position: absolute; left: 12%; right: 12%; top: 62px; height: 2px; background: linear-gradient(90deg, #c9cbd0, #8e9097, #a9abb0); opacity: 0.6; }
+.rail i { position: absolute; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--text); box-shadow: 0 0 12px var(--text); }
+@media (prefers-reduced-motion: no-preference) { .rail i { animation: travel 6s linear infinite; } }
+@keyframes travel { from { left: 0; } to { left: calc(100% - 8px); } }
+.hop { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.hop-dot { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; font-weight: 600; color: #fff; background: var(--c); box-shadow: 0 10px 30px -8px var(--c), 0 0 0 6px var(--bg); }
+.hop b { margin-top: 8px; font-weight: 600; }
+.hop span:last-child { color: var(--text-2); font-size: 15px; max-width: 22ch; }
+.memory-strip { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; padding: 12px 14px; border-radius: var(--r-md); background: color-mix(in oklch, var(--hue-amber) 9%, transparent); border: 1px solid color-mix(in oklch, var(--hue-amber) 22%, transparent); }
+.ms-label { font-size: 13px; font-weight: 600; color: var(--hue-amber); margin-right: 4px; }
+.ms-note { font: 12.5px var(--mono); padding: 4px 9px; border-radius: 8px; background: color-mix(in oklch, var(--surface) 80%, transparent); border: 1px solid var(--line); }
+@media (max-width: 720px) { .handoff { grid-template-columns: 1fr; } .rail { display: none; } }
+
+/* ---------- Modes (tabs + live picture) ---------- */
+.modes-ui { margin-top: 56px; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr); gap: 20px; align-items: stretch; }
+.mode-tabs { display: flex; flex-direction: column; gap: 8px; }
+.mode-tabs button { all: unset; box-sizing: border-box; cursor: pointer; padding: 16px 18px; border-radius: var(--r-md); border: 1px solid var(--line); background: color-mix(in oklch, var(--surface) 60%, transparent); transition: border-color .25s, background .25s; }
+.mode-tabs button b { display: block; font-weight: 600; font-size: 17px; }
+.mode-tabs button span { display: block; margin-top: 4px; color: var(--text-2); font-size: 14.5px; line-height: 1.45; }
+.mode-tabs button[aria-selected="true"] { border-color: color-mix(in oklch, var(--accent) 55%, transparent); background: color-mix(in oklch, var(--accent) 9%, var(--surface)); }
+.mode-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mode-stage { border-radius: var(--r-xl); padding: 22px; border: 1px solid var(--line-strong); background:
+  radial-gradient(420px 260px at 0% 0%, color-mix(in oklch, var(--accent) 12%, transparent), transparent 70%),
+  radial-gradient(420px 260px at 100% 100%, color-mix(in oklch, var(--cool) 12%, transparent), transparent 70%), var(--surface);
+  display: flex; flex-direction: column; justify-content: center; min-height: 340px; }
+.mode-view { display: flex; flex-direction: column; gap: 12px; }
+.mode-view[hidden], [hidden] { display: none !important; }
+@media (prefers-reduced-motion: no-preference) { .mode-view:not([hidden]) { animation: viewin .45s var(--ease); } }
+@keyframes viewin { from { opacity: 0; transform: translateY(8px); } }
+.mv-plan, .mv-huddle, .mv-wrap, .mv-ask { font-size: 13.5px; padding: 9px 12px; border-radius: 10px; }
+.mv-plan { background: color-mix(in oklch, var(--accent) 10%, transparent); }
+.mv-huddle { background: color-mix(in oklch, var(--cool) 10%, transparent); color: var(--text-2); }
+.mv-wrap { color: var(--text-2); border: 1px dashed var(--line-strong); }
+.mv-ask { align-self: flex-end; background: var(--bg-2); border: 1px solid var(--line); }
+.mv-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mv-col, .mv-win { --c: var(--text-3); position: relative; padding: 12px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); border-top: 2px solid var(--c); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mv-col b, .mv-win b { font-size: 13px; }
+.mv-col i, .mv-win i { font-style: normal; font: 11.5px var(--mono); color: var(--text-3); }
+.mv-col em { font-style: normal; font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+.mv-col em.busy { color: var(--cool); }
+.mv-col .txt { margin: 0; font-size: 13px; color: var(--text-2); line-height: 1.4; }
+.cla { --c: #c9cbd0; } .gem { --c: #9fa1a7; } .loc { --c: #a9abb0; } .gpt { --c: #7e8086; }
+.bar { margin: 0; height: 7px; border-radius: 4px; background: color-mix(in oklch, var(--text) 14%, transparent); }
+.bar.w30 { width: 30%; } .bar.w40 { width: 40%; } .bar.w50 { width: 50%; } .bar.w60 { width: 60%; } .bar.w70 { width: 70%; } .bar.w80 { width: 80%; }
+@media (prefers-reduced-motion: no-preference) { .bar.live { animation: grow 2.4s var(--ease) infinite alternate; } }
+@keyframes grow { from { width: 15%; } }
+.mv-chat { --c: var(--text-3); max-width: 88%; padding: 10px 13px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); border-left: 3px solid var(--c); font-size: 13.5px; line-height: 1.45; }
+.mv-chat b { display: block; font-size: 12px; color: var(--c); margin-bottom: 2px; }
+.mv-chat.gem { align-self: flex-end; }
+.mv-wins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mv-win { min-height: 120px; }
+.mode-extras { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.mode-extras span { flex: 1 1 280px; padding: 12px 14px; border-radius: var(--r-md); border: 1px solid var(--line); color: var(--text-2); font-size: 15px; }
+.mode-extras b { color: var(--text); margin-right: 6px; }
+@media (max-width: 860px) { .modes-ui { grid-template-columns: 1fr; } .mv-cols { grid-template-columns: 1fr; } .mv-wins { grid-template-columns: 1fr; } }
+
+/* ---------- Bento ---------- */
+.bento { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 56px; }
+.bento .span2 { grid-column: span 2; }
+.plans .plan-how { margin-top: 6px; font-size: 15px; color: var(--text); font-weight: 600; }
+.plans .plan-note { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 14px; color: var(--text-3); }
+.plans code { font-family: var(--mono); font-size: 0.88em; }
+.bento h3 { font-size: 21px; }
+.bento p { margin-top: 10px; color: var(--text-2); font-size: 16px; }
+.mini-notes, .mini-history, .mini-review { display: flex; flex-direction: column; gap: 6px; margin-top: 18px; font-size: 13px; }
+.mini-notes span { padding: 7px 10px; border-radius: 9px; background: color-mix(in oklch, var(--hue-amber) 9%, transparent); }
+.mini-notes i { font-style: normal; color: var(--hue-amber); margin-right: 4px; }
+.mini-notes em { font-style: normal; font-family: var(--mono); color: var(--text-2); margin-left: 6px; font-size: 12px; }
+.mini-history span { display: flex; align-items: center; gap: 7px; padding: 6px 9px; border-radius: 9px; background: var(--bg-2); border: 1px solid var(--line); color: var(--text-2); }
+.mini-review { font-family: var(--mono); font-size: 12.5px; }
+.mini-review b { font-family: var(--font); font-size: 13px; }
+.mini-review .add { color: oklch(0.6 0.15 150); } .mini-review .del { color: oklch(0.62 0.18 25); }
+@media (max-width: 920px) { .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .bento { grid-template-columns: 1fr; } .bento .span2 { grid-column: auto; } }
+
+/* ---------- Marquee ---------- */
+.marquee { margin-top: 44px; display: grid; gap: 12px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); overflow: hidden; }
+.mq-row { overflow: hidden; }
+.mq-track { display: flex; gap: 10px; width: max-content; }
+.mq-track span { padding: 10px 18px; border-radius: 999px; font-size: 16px; white-space: nowrap; border: 1px solid var(--line); background: color-mix(in oklch, var(--surface) 80%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  .mq-track { animation: mq 50s linear infinite; }
+  .mq-row.rev .mq-track { animation-direction: reverse; }
+  .marquee:hover .mq-track { animation-play-state: paused; }
+}
+@keyframes mq { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .mq-track { flex-wrap: wrap; width: auto; justify-content: center; } .mq-track span[aria-hidden] { display: none; } }
+
+/* ---------- Footer ---------- */
+footer .wrap { align-items: center; }
+footer .brand { font-size: 15px; color: var(--text); }
+footer nav { display: flex; gap: 18px; }
+footer nav a { text-decoration: none; color: var(--text-3); }
+footer nav a:hover { color: var(--text); }
+
+/* ---------- Motion off ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .blob { will-change: auto; }
+}
+</style>
+</head>
+<body>
+<div class="ambient" aria-hidden="true"><i class="al"></i><i class="ar"></i></div>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="icon.png" alt="" width="28" height="28">Terminus</a>
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#together">Together</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#agents">Agents</a></li>
+      <li><a href="#plans">Your plans</a></li>
+    </ul>
+    <a class="btn btn-primary btn-sm" href="#download">Join the beta</a>
+  </div>
+</header>
+
+<main id="top">
+  <!-- Hero -->
+  <section class="hero" data-glow>
+    <div class="atmos" aria-hidden="true">
+      <div class="dots"></div>
+      <i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><i class="blob b4"></i><i class="blob b5"></i>
+    </div>
+    <div class="wrap">
+      <img class="hero-mark rise" style="--d:0ms" src="icon.png" alt="" width="84" height="84">
+      <span class="eyebrow rise" style="--d:40ms"><b></b>Invite-only beta for macOS</span>
+      <h1 class="rise" style="--d:90ms">Every agent. One <span class="sweep">memory</span>.</h1>
+      <p class="lede rise" style="--d:180ms">One memory for all your coding agents. Claude, Codex, Gemini and 40 more share what they learn about your project, so any of them can pick up where another left off, in Terminus or in the tools you already use.</p>
+      <div class="cta rise" style="--d:270ms">
+        <a class="btn btn-primary" href="#request" data-invite>Request an invite</a>
+        <a class="btn btn-ghost" href="#how">How it works</a>
+      </div>
+      <p class="fine rise" style="--d:340ms">Invite-only beta · macOS 13 or later on Apple Silicon</p>
+    </div>
+
+    <div class="wrap">
+      <div class="stage rise" style="--d:420ms">
+        <div class="float">
+          <div class="window" role="img" aria-label="A Terminus team: a quick plan gives Claude the API and Gemini the UI, both work at the same time, and Gemini calls a short huddle that moves the session table to Claude.">
+            <div class="titlebar"><i></i><i></i><i></i><span>terminus · add sign-in</span></div>
+            <div class="thread" aria-hidden="true">
+              <div class="msg"><div class="av you">Y</div><div><div class="who">You</div>Add email sign-in: the API and the form.</div></div>
+              <div class="plan"><div class="plan-head"><b>Team plan</b><span>v2 · planned by Gemini Flash</span></div>
+                <div class="plan-note"><span class="dot gem"></span>Huddle: Gemini needs a session table; it moves to Claude. Only Claude restarted.</div></div>
+              <div class="cols">
+                <div class="col"><div class="col-head"><span class="dot cla"></span>Claude<em class="done">done</em></div><div class="col-task">API, session table · owns api/auth.rs</div>
+                  <p>Added <code>POST /login</code>, a sessions table and 6 tests. All pass.</p><div class="chip">api/auth.rs <span class="add">+84</span></div></div>
+                <div class="col"><div class="col-head"><span class="dot gem"></span>Gemini<em class="busy">working</em></div><div class="col-task">Sign-in form · owns ui/Login.tsx</div>
+                  <p><span class="typing">Form and validation done; wiring it to /login</span></p></div>
+              </div>
+            </div>
+            <div class="composer" aria-hidden="true">Ask anything, or @ a file
+              <div class="pills"><span class="pill on">Team</span><span class="pill">Side by side</span><span class="pill">Discuss</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><strong data-count="19">19</strong><span>coding agents built in</span></div>
+        <div class="stat"><strong data-count="26">26</strong><span>more from the ACP registry</span></div>
+        <div class="stat"><strong data-count="4">4</strong><span>ways to put agents together</span></div>
+        <div class="stat"><strong data-count="9">9</strong><span>memory tools for any agent</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="section" id="how">
+    <div class="wrap center">
+      <p class="kicker reveal">How it works</p>
+      <h2 class="reveal">Never stuck at a usage limit.</h2>
+      <p class="sub reveal">When Claude hits its limit halfway through a task, Terminus hands it to Codex or Gemini in the same thread, with everything so far as context, and the work keeps going. Or switch yourself any time: the next agent reads the thread first.</p>
+    </div>
+    <div class="wrap">
+      <div class="handoff reveal" aria-label="Claude, then Gemini, then a local model work on one task, all reading the same memory">
+        <div class="rail" aria-hidden="true"><i></i></div>
+        <div class="hop" style="--c: #c9cbd0">
+          <span class="hop-dot">C</span><b>Claude</b><span>Finds the bug, fixes it</span>
+        </div>
+        <div class="hop" style="--c: #8e9097">
+          <span class="hop-dot">G</span><b>Gemini</b><span>Caught up on 3 turns. Reviews the fix</span>
+        </div>
+        <div class="hop" style="--c: #a9abb0">
+          <span class="hop-dot">L</span><b>Local model</b><span>Writes the docs, for free</span>
+        </div>
+        <div class="memory-strip" aria-hidden="true">
+          <span class="ms-label">Shared memory</span>
+          <span class="ms-note">test-command: npm test -- --runInBand</span>
+          <span class="ms-note">auth uses sessions, not JWT</span>
+          <span class="ms-note">don't touch generated/</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Together -->
+  <section class="section" id="together">
+    <div class="wrap center">
+      <p class="kicker reveal">Together</p>
+      <h2 class="reveal">Put several agents on one job.</h2>
+      <p class="sub reveal">Claude, Gemini, GPT and local models at once, each on its own plan, all reading the same memory.</p>
+    </div>
+    <div class="wrap">
+      <div class="modes-ui reveal">
+        <div class="mode-tabs" role="tablist" aria-label="Ways to use several agents">
+          <button role="tab" aria-selected="true" data-mode="team"><b>Team</b><span>A quick plan splits the work. Each agent does its part at once; they huddle if the plan breaks.</span></button>
+          <button role="tab" aria-selected="false" data-mode="side"><b>Side by side</b><span>Every agent answers the same message in its own column. One click combines them.</span></button>
+          <button role="tab" aria-selected="false" data-mode="discuss"><b>Discuss</b><span>They answer in turn, each responding to the others. The last one sums up.</span></button>
+          <button role="tab" aria-selected="false" data-mode="separate"><b>Separate chats</b><span>Each agent gets its own chat, on its own git branch if you like.</span></button>
+        </div>
+        <div class="mode-stage" aria-live="polite">
+          <div class="mode-view" data-view="team">
+            <div class="mv-plan"><b>Team plan</b> · Claude: API · Gemini: sign-in form · Local: tests</div>
+            <div class="mv-cols">
+              <div class="mv-col cla"><b>Claude</b><i>owns api/auth.rs</i><p class="bar w80"></p><p class="bar w60"></p><em>done</em></div>
+              <div class="mv-col gem"><b>Gemini</b><i>owns ui/Login.tsx</i><p class="bar w70"></p><p class="bar w40 live"></p><em class="busy">working</em></div>
+              <div class="mv-col loc"><b>Local</b><i>owns tests/</i><p class="bar w50"></p><p class="bar w30 live"></p><em class="busy">working</em></div>
+            </div>
+            <div class="mv-huddle">Huddle: Gemini needs a session table → moved to Claude. Only Claude restarted.</div>
+          </div>
+          <div class="mode-view" data-view="side" hidden>
+            <div class="mv-ask">Which state library should we use?</div>
+            <div class="mv-cols">
+              <div class="mv-col cla"><b>Claude</b><p class="txt">Signals: you already use Solid.</p><em>done</em></div>
+              <div class="mv-col gem"><b>Gemini</b><p class="txt">Signals, plus a store for the cache.</p><em>done</em></div>
+              <div class="mv-col gpt"><b>GPT</b><p class="txt">Zustand-style store; simpler tests.</p><em>done</em></div>
+            </div>
+            <div class="mv-wrap">Wrap up with Claude → <b>Combine answers</b></div>
+          </div>
+          <div class="mode-view" data-view="discuss" hidden>
+            <div class="mv-ask">Rewrite the parser, or patch it?</div>
+            <div class="mv-chat cla"><b>Claude</b> Patch it: the bug is one regex.</div>
+            <div class="mv-chat gem"><b>Gemini</b> Disagree: the same regex breaks on nested quotes. Rewrite that one function.</div>
+            <div class="mv-chat gpt"><b>GPT</b> Sums up: rewrite <code>tokenize()</code> only; keep the rest. Both agree on tests first.</div>
+          </div>
+          <div class="mode-view" data-view="separate" hidden>
+            <div class="mv-wins">
+              <div class="mv-win cla"><b>Claude</b><i>terminus/fast-path</i><p class="bar w70"></p><p class="bar w40"></p></div>
+              <div class="mv-win gem"><b>Gemini</b><i>terminus/cache-layer</i><p class="bar w60"></p><p class="bar w50 live"></p></div>
+            </div>
+            <div class="mv-wrap">Each on its own branch · they see what the others are doing</div>
+          </div>
+        </div>
+      </div>
+      <div class="mode-extras reveal">
+        <span><b>Ask</b> Any agent can ask another for a second opinion mid-task.</span>
+        <span><b>Hand over</b> Out of usage? The next agent gets the open plan and what's unfinished.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="wrap center">
+      <p class="kicker reveal">Shared context</p>
+      <h2 class="reveal">A project memory that keeps growing.</h2>
+      <p class="sub reveal">What one agent learns, every agent can use. It stays on your Mac, whichever model you use next.</p>
+    </div>
+    <div class="wrap">
+      <div class="bento reveal">
+        <article class="glow-card g-blue span2" data-glow>
+          <h3>Learns which agent works best</h3>
+          <p>Terminus notices how each agent's work turns out on your projects: kept or rewound, tests passing, whether you had to correct it. Then it suggests the agent with the best record for the task in front of you. Only an app that runs them all can see this.</p>
+        </article>
+        <article class="glow-card g-violet" data-glow>
+          <h3>Hands off at the limit</h3>
+          <p>Hit your 5-hour limit mid-task? Another agent picks up where it stopped. Ask first, or switch automatically.</p>
+        </article>
+        <article class="glow-card g-amber span2" data-glow>
+          <h3>Memory it learns</h3>
+          <p>After a turn, Terminus saves what's worth keeping: the test command, a rule you stated, a decision and why.</p>
+          <div class="mini-notes" aria-hidden="true">
+            <span><i>✦</i> test-command <em>npm test -- --runInBand</em></span>
+            <span><i>✦</i> style <em>no default exports in ui/</em></span>
+            <span><i>✦</i> decision <em>sessions over JWT: revocable</em></span>
+          </div>
+        </article>
+        <article class="glow-card g-orange" data-glow>
+          <h3>Why did this change?</h3>
+          <p>Right-click any file: every turn that touched it, which agent, and what you asked.</p>
+          <div class="mini-history" aria-hidden="true">
+            <span><i class="dot cla"></i>Claude · Fix flaky upload test</span>
+            <span><i class="dot gem"></i>Gemini · Add retry to download</span>
+          </div>
+        </article>
+        <article class="glow-card g-violet" data-glow>
+          <h3>One thread, many agents</h3>
+          <p>Agents take turns in the same conversation and catch up on what they missed.</p>
+        </article>
+        <article class="glow-card g-emerald" data-glow>
+          <h3>Bring your history</h3>
+          <p>Import Claude Code, Codex, Copilot and Gemini CLI conversations. Search them by meaning.</p>
+        </article>
+        <article class="glow-card g-blue" data-glow>
+          <h3>Checkpoints and rewind</h3>
+          <p>Every turn is a checkpoint. Rewind, then try again with another agent.</p>
+        </article>
+        <article class="glow-card g-indigo span2" data-glow>
+          <h3>Review across models</h3>
+          <p>Have one agent review another's turn from its full diff. A different model catches different mistakes.</p>
+          <div class="mini-review" aria-hidden="true"><b>Gemini reviewing Claude's turn 4</b><span class="add">+ looks good: tests cover the retry path</span><span class="del">− line 48: same race in download.ts</span></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Agents -->
+  <section class="section" id="agents">
+    <div class="wrap center">
+      <p class="kicker reveal">Agents</p>
+      <h2 class="reveal">Use the ones you already pay for.</h2>
+      <p class="sub reveal">19 coding agents built in, 26 more from the ACP registry, any OpenAI-compatible API, and models on your Mac. Each runs through its own CLI and your own sign-in; keys stay in the Keychain.</p>
+    </div>
+    <div class="marquee reveal" aria-label="Supported agents">
+      <div class="mq-row"><div class="mq-track">
+        <span>Claude Code</span><span>Codex</span><span>Antigravity</span><span>Gemini CLI</span><span>GitHub Copilot</span><span>Cursor</span><span>OpenCode</span><span>Qwen Code</span><span>Kimi</span><span>Goose</span><span>Auggie</span><span>Cline</span>
+        <span aria-hidden="true">Claude Code</span><span aria-hidden="true">Codex</span><span aria-hidden="true">Antigravity</span><span aria-hidden="true">Gemini CLI</span><span aria-hidden="true">GitHub Copilot</span><span aria-hidden="true">Cursor</span><span aria-hidden="true">OpenCode</span><span aria-hidden="true">Qwen Code</span><span aria-hidden="true">Kimi</span><span aria-hidden="true">Goose</span><span aria-hidden="true">Auggie</span><span aria-hidden="true">Cline</span>
+      </div></div>
+      <div class="mq-row rev"><div class="mq-track">
+        <span>Factory Droid</span><span>Kilo Code</span><span>Kiro</span><span>Mistral Vibe</span><span>Grok Build</span><span>Devin</span><span>Qoder</span><span>OpenRouter</span><span>OpenAI</span><span>DeepSeek</span><span>Groq</span><span>Ollama</span><span>LM Studio</span>
+        <span aria-hidden="true">Factory Droid</span><span aria-hidden="true">Kilo Code</span><span aria-hidden="true">Kiro</span><span aria-hidden="true">Mistral Vibe</span><span aria-hidden="true">Grok Build</span><span aria-hidden="true">Devin</span><span aria-hidden="true">Qoder</span><span aria-hidden="true">OpenRouter</span><span aria-hidden="true">OpenAI</span><span aria-hidden="true">DeepSeek</span><span aria-hidden="true">Groq</span><span aria-hidden="true">Ollama</span><span aria-hidden="true">LM Studio</span>
+      </div></div>
+    </div>
+    <div class="wrap">
+      <div class="panel reveal">
+        <div>
+          <div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5"/></svg></div>
+          <h3>Your memory works in your other tools too.</h3>
+          <p>Connect it to Claude Code, Codex, Cursor or VS Code with one click in Settings → Connections. Their agents then read and add to the same project memory, past threads and file history, so nothing you teach one agent is lost when you switch.</p>
+        </div>
+        <div class="tools">
+          <div class="tool"><code>thread_search</code><p>Find past work by meaning.</p></div>
+          <div class="tool"><code>thread_read</code><p>Read what another agent did.</p></div>
+          <div class="tool"><code>memory_write</code><p>Save a note for every agent.</p></div>
+          <div class="tool"><code>file_history</code><p>Why a file changed.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Plans: how each company's sign-in is used -->
+  <section class="section" id="plans">
+    <div class="wrap center">
+      <p class="kicker reveal">Your plans</p>
+      <h2 class="reveal">Your subscriptions, used the way each company allows.</h2>
+      <p class="sub reveal">Terminus never sees or stores your sign-in. Each agent signs in through its maker's own app, and Terminus follows each company's rules for apps like it.</p>
+    </div>
+    <div class="wrap">
+      <div class="bento plans reveal">
+        <article class="glow-card" data-glow>
+          <h3>Claude</h3>
+          <p class="plan-how">Runs your own Claude Code.</p>
+          <p>Terminus starts the Claude Code you installed, unmodified, and you sign in with Anthropic's own sign-in (<code>claude auth login</code>). Your Pro or Max plan works everywhere in Terminus, teams and discussions included. Or use an Anthropic API key.</p>
+          <p class="plan-note">Anthropic's terms let products run the unmodified Claude Code with each person's own subscription. Several Claude agents at once use your plan's limits faster.</p>
+        </article>
+        <article class="glow-card" data-glow>
+          <h3>Codex (ChatGPT)</h3>
+          <p class="plan-how">Runs OpenAI's open-source Codex.</p>
+          <p>You sign in with your ChatGPT plan through Codex's own login, and it works everywhere in Terminus. Usage counts against your plan's Codex allowance. Or use an OpenAI API key.</p>
+          <p class="plan-note">OpenAI supports using ChatGPT plans in third-party tools.</p>
+        </article>
+        <article class="glow-card" data-glow>
+          <h3>Antigravity (Google)</h3>
+          <p class="plan-how">You stay in the driver's seat.</p>
+          <p>On a personal Google sign-in, Google allows Antigravity only while you drive it. So it answers your own messages directly, and in teams and discussions every message to it waits for you to read, edit and send. It's never used for background summaries or for other agents' questions.</p>
+          <p class="plan-note">With a Gemini API key it works everywhere. Google AI Pro and Ultra include monthly Gemini API credits you can claim in AI Studio. Gemini CLI is API-key only: Google ended personal sign-in for it in June 2026.</p>
+        </article>
+      </div>
+      <p class="fine center reveal">Based on each company's published terms and guidance as of November 2026. Terminus isn't affiliated with or endorsed by Anthropic, OpenAI or Google.</p>
+    </div>
+  </section>
+
+  <!-- Download -->
+  <section class="download" id="download" data-glow>
+    <div class="atmos mirrored" aria-hidden="true">
+      <div class="dots"></div>
+      <i class="blob b1"></i><i class="blob b2"></i><i class="blob b4"></i><i class="blob b5"></i>
+    </div>
+    <div class="wrap">
+      <img class="icon reveal" src="icon.png" alt="Terminus app icon" width="112" height="112">
+      <h2 class="reveal">Join the beta.</h2>
+      <p class="sub reveal">The beta is invite-only while we open it up a few people at a time.</p>
+      <ol class="beta-steps reveal">
+        <li><strong>Request an invite</strong> with the button below.</li>
+        <li><strong>Get your invite:</strong> a personal beta code and the download link, sent to you privately.</li>
+        <li><strong>Install and paste your code</strong> when Terminus asks. After that it updates itself.</li>
+      </ol>
+      <div class="cta reveal">
+        <a class="btn btn-primary" href="#request" data-invite>Request an invite</a>
+      </div>
+      <p class="fine">Invites go out a few at a time. We'll email you if you're in.</p>
+      <div class="reqs reveal">
+        <div class="glow-card req g-blue" data-glow><strong>macOS 13 or later</strong><span>Ventura, Sonoma, Sequoia or newer.</span></div>
+        <div class="glow-card req g-indigo" data-glow><strong>Apple Silicon</strong><span>Any Mac with an M-series chip.</span></div>
+        <div class="glow-card req g-emerald" data-glow><strong>Your agents' apps</strong><span>For Claude, Claude Code installed. Terminus runs your own copy.</span></div>
+        <div class="glow-card req g-amber" data-glow><strong>One agent</strong><span>Any agent above with you signed in, or Ollama for local models.</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="icon.png" alt="" width="22" height="22">Terminus</a>
+    <nav aria-label="Footer"><a href="#how">How it works</a><a href="#together">Together</a><a href="#features">Features</a><a href="#plans">Your plans</a><a href="#download">Join the beta</a></nav>
+    <span>Beta · Your threads and memory stay on your Mac.</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+  // Pointer-reactive light: the closest [data-glow] ancestor gets --mx/--my and .is-glowing; <html> gets --cx/--cy.
+  let lit = null, pending = null;
+  const frame = () => {
+    const e = pending; pending = null;
+    const root = document.documentElement;
+    root.style.setProperty('--cx', e.clientX + 'px');
+    root.style.setProperty('--cy', e.clientY + 'px');
+    const el = e.target instanceof Element ? e.target.closest('[data-glow]') : null;
+    if (lit && lit !== el) lit.classList.remove('is-glowing');
+    lit = el;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    el.classList.add('is-glowing');
+  };
+  addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
+    if (!pending) requestAnimationFrame(frame);
+    pending = e;
+  }, { passive: true });
+  document.addEventListener('pointerleave', () => { lit?.classList.remove('is-glowing'); lit = null; });
+
+  // Together: tabs that switch the little picture of each mode.
+  const tabs = [...document.querySelectorAll('.mode-tabs [role=tab]')];
+  const show = (t) => {
+    for (const x of tabs) x.setAttribute('aria-selected', String(x === t));
+    for (const v of document.querySelectorAll('.mode-view')) v.hidden = v.dataset.view !== t.dataset.mode;
+  };
+  let auto = !reduce.matches;
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => { auto = false; show(t); });
+    t.addEventListener('keydown', e => {
+      const d = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault(); auto = false;
+      const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); show(n);
+    });
+  });
+  const stage = document.querySelector('.modes-ui');
+  stage?.addEventListener('pointerenter', () => { auto = false; });
+  setInterval(() => {
+    if (!auto || document.hidden) return;
+    const i = tabs.findIndex(t => t.getAttribute('aria-selected') === 'true');
+    show(tabs[(i + 1) % tabs.length]);
+  }, 5000);
+
+  // Stats count up once when first seen. The real numbers are already in the HTML.
+  if (!reduce.matches && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => {
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        io.unobserve(en.target);
+        const el = en.target, end = +el.dataset.count, suffix = el.dataset.suffix || '';
+        const t0 = performance.now(), dur = 1200;
+        const tick = now => {
+          const p = Math.min(1, (now - t0) / dur), eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(end * eased) + suffix;
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        el.textContent = '0' + suffix;
+        requestAnimationFrame(tick);
+        setTimeout(() => { el.textContent = end + suffix; }, dur + 300);
+      }
+    }, { threshold: 0.6 });
+    document.querySelectorAll('[data-count]').forEach(el => io.observe(el));
+  }
+})();
+</script>
+<div class="invite-modal" id="invite-modal" hidden>
+  <div class="im-back" data-close></div>
+  <div class="im-card" role="dialog" aria-modal="true" aria-labelledby="invite-title">
+    <button class="im-x" type="button" data-close aria-label="Close">&times;</button>
+    <div class="im-body">
+      <h3 id="invite-title">Request an invite</h3>
+      <p class="im-sub">Tell us a little about you. If you're invited, we'll email your beta code and the download link.</p>
+      <form class="invite-form" id="request" novalidate>
+        <div class="if-row">
+          <label>Name<input name="name" maxlength="80" autocomplete="name"><span class="if-err" data-err="name" role="alert"></span></label>
+          <label>Email<input name="email" type="email" maxlength="200" autocomplete="email"><span class="if-err" data-err="email" role="alert"></span></label>
+        </div>
+        <fieldset><legend>Coding agents you use</legend><div class="if-chips"><label class="if-chip"><input type="checkbox" name="agents" value="Claude Code"><span>Claude Code</span></label><label class="if-chip"><input type="checkbox" name="agents" value="Codex"><span>Codex</span></label><label class="if-chip"><input type="checkbox" name="agents" value="Antigravity or Gemini"><span>Antigravity or Gemini</span></label><label class="if-chip"><input type="checkbox" name="agents" value="Local models"><span>Local models</span></label><label class="if-chip"><input type="checkbox" name="agents" value="Something else"><span>Something else</span></label></div><span class="if-err" data-err="agents" role="alert"></span></fieldset>
+        <label>What would you use Terminus for?<textarea name="use_case" maxlength="2000" rows="3" placeholder="A sentence is plenty."></textarea><span class="if-err" data-err="use_case" role="alert"></span></label>
+        <label class="if-check"><input type="checkbox" name="apple_silicon"> I have an Apple Silicon Mac (M1 or newer) with macOS 13 or later.</label><span class="if-err" data-err="apple_silicon" role="alert"></span>
+        <input class="if-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <button class="btn btn-primary" type="submit">Send request</button>
+        <p class="if-status" role="status" aria-live="polite"></p>
+        <p class="fine">Your email is only used to send your invite.</p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const URL = "https://script.google.com/macros/s/AKfycbzGGLtBMl4GPtCm68SSX5zx4yfd697WkqW9h_SUE4T83C4QawEv91unpXVIZqIZoKnK/exec";
+  const modal = document.getElementById('invite-modal');
+  const form = document.getElementById('request');
+  if (!modal || !form) return;
+  const status = form.querySelector('.if-status');
+  const say = (t, isErr) => { status.textContent = t; status.classList.toggle('err', !!isErr); };
+  let lastFocus = null;
+  const open = () => {
+    lastFocus = document.activeElement;
+    modal.hidden = false;
+    document.body.classList.add('im-open');
+    setTimeout(() => (modal.querySelector('input[name=name]') || modal.querySelector('button')).focus(), 30);
+  };
+  const close = () => {
+    modal.hidden = true;
+    document.body.classList.remove('im-open');
+    if (location.hash === '#request') history.replaceState(null, '', location.pathname + location.search);
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  };
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-invite], a[href="#request"]');
+    if (t) { e.preventDefault(); open(); return; }
+    if (e.target.closest('[data-close]')) close();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) close(); });
+  if (location.hash === '#request') open();
+
+  const setErr = (field, msg) => {
+    const slot = form.querySelector('[data-err="' + field + '"]');
+    if (slot) slot.textContent = msg || '';
+    const el = field === 'agents' ? form.querySelector('.if-chips') : form.querySelector('[name="' + field + '"]');
+    if (el) el.classList.toggle('bad', !!msg);
+  };
+  // Clear a field's error as soon as it's fixed.
+  form.addEventListener('input', (e) => { const n = e.target.name; if (n) setErr(n === 'agents' ? 'agents' : n, ''); });
+  form.addEventListener('change', (e) => { const n = e.target.name; if (n) setErr(n === 'agents' ? 'agents' : n, ''); });
+
+  const check = (f) => {
+    const name = (f.get('name') || '').trim();
+    const email = (f.get('email') || '').trim();
+    const use = (f.get('use_case') || '').trim();
+    const errors = {};
+    if (name.length < 2 || !/[A-Za-z\u00C0-\u024F\u0370-\u1FFF\u3040-\u9FFF]/.test(name)) errors.name = 'Add your name.';
+    if (!/^[^@\s]+@[^@\s.]+(\.[^@\s.]+)*\.[A-Za-z]{2,}$/.test(email)) errors.email = 'Add an email address we can send your invite to.';
+    if (f.getAll('agents').length === 0) errors.agents = 'Pick at least one.';
+    if (use.length < 10) errors.use_case = 'Tell us in a sentence (at least 10 characters).';
+    if (!f.get('apple_silicon')) errors.apple_silicon = 'The beta needs an Apple Silicon Mac with macOS 13 or later.';
+    return { name, email, use, errors };
+  };
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = new FormData(form);
+    const { name, email, use, errors } = check(f);
+    ['name', 'email', 'agents', 'use_case', 'apple_silicon'].forEach((k) => setErr(k, errors[k]));
+    const first = Object.keys(errors)[0];
+    if (first) {
+      say('Fix the highlighted fields.', true);
+      const el = first === 'agents' ? form.querySelector('input[name=agents]') : form.querySelector('[name="' + first + '"]');
+      if (el) el.focus();
+      return;
+    }
+    const safe = (t) => t.replace(/[<>&"]/g, '');
+    const done = () => {
+      modal.querySelector('.im-body').innerHTML = '<div class="invite-done" role="status"><strong>Thanks, ' + safe(name) + '. You\'re on the list.</strong><p>If you\'re invited, we\'ll email your beta code and the download link to ' + safe(email) + '.</p><button class="btn btn-primary" type="button" data-close>Done</button></div>';
+      document.querySelectorAll('[data-invite]').forEach((b) => { b.textContent = 'Request sent'; });
+    };
+    if (f.get('website')) return done(); // a bot filled the hidden field
+    if (!URL) return say('Invite requests open very soon. Please check back shortly.', true);
+    const btn = form.querySelector('button[type=submit]'); btn.disabled = true; say('Sending…');
+    try {
+      // text/plain keeps it a simple request (Apps Script can't answer a CORS preflight).
+      const r = await fetch(URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'request', name: name.slice(0, 80), email: email.slice(0, 200), agents: f.getAll('agents'), use_case: use.slice(0, 2000), apple_silicon: true }),
+      });
+      const res = await r.json();
+      if (!r.ok || res.error) throw new Error(res.error || String(r.status));
+      done();
+    } catch (err) {
+      btn.disabled = false;
+      say(err && err.message && !/^\d+$/.test(err.message) && err.message !== 'Failed to fetch' ? 'Couldn\'t send: ' + err.message : 'That didn\'t go through. Check your connection and try again.', true);
+    }
+  });
+})();
+</script>
+</body>
+</html>
