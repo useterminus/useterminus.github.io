@@ -571,20 +571,34 @@ body.im-open { overflow: hidden; }
     if (f.get('website')) return done(); // a bot filled the hidden field
     if (!URL) return say('Invite requests open very soon. Please check back shortly.', true);
     const btn = form.querySelector('button[type=submit]'); btn.disabled = true; say('Sending…');
+    const body = JSON.stringify({ action: 'request', name: name.slice(0, 80), email: email.slice(0, 200), agents: f.getAll('agents'), use_case: use.slice(0, 2000), apple_silicon: true });
+    const opts = { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body }; // text/plain: no CORS preflight (Apps Script can't answer one)
+    let res = null;
     try {
-      // text/plain keeps it a simple request (Apps Script can't answer a CORS preflight).
-      const r = await fetch(URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'request', name: name.slice(0, 80), email: email.slice(0, 200), agents: f.getAll('agents'), use_case: use.slice(0, 2000), apple_silicon: true }),
-      });
-      const res = await r.json();
-      if (!r.ok || res.error) throw new Error(res.error || String(r.status));
-      done();
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 20000);
+      const r = await fetch(URL, Object.assign({ signal: ctl.signal }, opts));
+      clearTimeout(timer);
+      res = await r.json().catch(() => null);
+      if (!r.ok || !res) throw new Error('unreadable');
     } catch (err) {
-      btn.disabled = false;
-      say(err && err.message && !/^\d+$/.test(err.message) && err.message !== 'Failed to fetch' ? 'Couldn\'t send: ' + err.message : 'That didn\'t go through. Check your connection and try again.', true);
+      // Apps Script answers through a redirect to another Google address, which some browsers
+      // and privacy settings won't let the page read, even though the request was saved. Send
+      // it once more in a way that's always delivered but can't be read; the sheet keeps one
+      // request per email, so this never makes a duplicate.
+      try {
+        await fetch(URL, Object.assign({ mode: 'no-cors' }, opts));
+        return done();
+      } catch (e2) {
+        btn.disabled = false;
+        return say('That didn\'t go through. Check your connection and try again.', true);
+      }
     }
+    if (res.error) {
+      btn.disabled = false;
+      return say('Couldn\'t send: ' + res.error, true);
+    }
+    done();
   });
 })();
 </script>
