@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Terminus: your coding agents, working from the same history</title>
-<meta name="description" content="A Mac app for Claude Code, Codex, Gemini and local models. They share one conversation and one project memory, with your teammates too, so whoever picks up the work knows what happened and why.">
+<meta name="description" content="A Mac app for Claude Code, Codex, Gemini and local models. They share one conversation and one project memory, and teammates join from their own computers with their own subscriptions, so whoever picks up the work knows what happened and why.">
 <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151514" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
@@ -122,6 +122,13 @@ h2 { font-size: clamp(26px, 3vw, 34px); line-height: 1.15; letter-spacing: -.02e
 .compare td:first-child { color: var(--text-2); width: 22%; }
 .compare td:nth-child(2) { color: var(--text-2); width: 36%; }
 .table-wrap { overflow-x: auto; }
+
+.steps { margin: 32px 0 0; padding: 0; list-style: none; counter-reset: s; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; border-top: 1px solid var(--line); }
+.steps li { counter-increment: s; padding-top: 16px; }
+.steps li::before { content: counter(s); display: block; font-size: 13px; color: var(--mark); font-weight: 600; margin-bottom: 4px; }
+.steps strong { display: block; font-weight: 600; }
+.steps span { color: var(--text-2); font-size: 15px; }
+@media (max-width: 760px) { .steps { grid-template-columns: 1fr; gap: 8px; } }
 
 /* Code + why panel */
 .code { font-family: var(--mono); font-size: 12.5px; line-height: 1.75; padding: 10px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
@@ -244,7 +251,7 @@ body.im-open { overflow: hidden; }
   <div class="wrap hero">
     <div>
       <h1>Your coding agents, working from the same history.</h1>
-      <p class="lede">Terminus is a Mac app for Claude Code, Codex, Gemini and local models. They work in one conversation with one project memory, and so can your teammates. Whoever picks up the work, person or agent, knows what happened and why.</p>
+      <p class="lede">Terminus is a Mac app for Claude Code, Codex, Gemini and local models. They work in one conversation with one project memory, and teammates can join that conversation from their own computers, with their own subscriptions. Whoever picks up the work, person or agent, knows what happened and why.</p>
       <div class="cta">
         <a class="btn btn-primary" href="#request" data-invite>Request an invite</a>
         <span class="fine">Invite-only beta · macOS 13 or later on Apple Silicon</span>
@@ -318,28 +325,35 @@ body.im-open { overflow: hidden; }
   <section id="team">
     <div class="wrap">
       <p class="label">Teams</p>
-      <h2>Work in the same chat as your teammates, from your own computers.</h2>
-      <p class="intro">Share a thread and send the invite. Everyone uses their own agents and plans on their own copy of the code, and the conversation stays in sync, so your agent knows what your teammate's agent just did.</p>
+      <h2>Work in the same chat as your teammates, each on your own computer and your own plan.</h2>
+      <p class="intro">Share a thread and send the invite. Your teammates join from their Macs, wherever they are, and keep using the subscriptions they already have: one person on Claude Max, another on a ChatGPT plan, a third on local models. The conversation stays in sync, so your agent knows what your teammate's agent just did.</p>
+      <ol class="steps">
+        <li><strong>Share</strong><span>Press Share next to the message box. Terminus makes a private invite for that chat.</span></li>
+        <li><strong>Send the invite</strong><span>Paste it to a teammate however you like: Slack, email, a message.</span></li>
+        <li><strong>They join</strong><span>In Terminus on their computer they choose Join, paste it, and pick their copy of the project. They see the whole chat and can send messages right away.</span></li>
+      </ol>
       <div class="split">
         <div class="win" aria-label="A shared thread">
           <div class="win-bar"><b>Checkout redesign</b><span class="right">Shared</span></div>
           <div class="win-body">
             <div>
-              <div class="who"><strong>Maya's Claude</strong></div>
+              <div class="who"><strong>Maya's Claude</strong> · on Maya's Max plan</div>
               Moved the address form into its own component and kept the old validation rules.
               <div class="files"><span>AddressForm.tsx</span></div>
             </div>
             <div class="msg-you"><div class="who">Sam</div>Use Maya's new form on the gift card page too.</div>
             <div>
-              <div class="who"><strong>Sam's Codex</strong> · working</div>
+              <div class="who"><strong>Sam's Codex</strong> · on Sam's ChatGPT plan · working</div>
               Using AddressForm from Maya's change. Wiring it into GiftCard.tsx…
             </div>
           </div>
           <div class="presence"><span><span class="dot"></span>Maya</span><span><span class="dot"></span>Sam · agent working</span><span><span class="dot idle"></span>Priya · offline</span></div>
         </div>
         <ul class="points">
-          <li><strong>Straight between computers</strong><span>Chats go peer to peer, end-to-end encrypted. There's no Terminus server and no account to make.</span></li>
-          <li><strong>Each person's own agents</strong><span>Your messages run on your agents and your plan. Their turns show their name, and nobody approves anyone else's permissions.</span></li>
+          <li><strong>Each person's own subscription</strong><span>Your messages run on the agents signed in on your computer and count against your plan, never a teammate's. Nobody shares a login, an API key or a bill.</span></li>
+          <li><strong>Any computers, anywhere</strong><span>Chats go peer to peer between Macs, end-to-end encrypted, across offices and home networks. There's no Terminus server and no account to make.</span></li>
+          <li><strong>Each person's own code</strong><span>Everyone works on their own checkout; code moves through git as usual. Teammates' turns show their name, and nobody approves anyone else's permissions.</span></li>
+          <li><strong>Your own Macs too</strong><span>Join your own chat from your laptop to carry on where you left off at your desk, using whatever's signed in there.</span></li>
           <li><strong>Catch up after being away</strong><span>Close your laptop and open it later: Terminus reconnects and fills in what you missed, and a short "Since you left" card says what changed.</span></li>
         </ul>
       </div>
@@ -407,7 +421,7 @@ body.im-open { overflow: hidden; }
     <div class="wrap">
       <p class="label">Your plans</p>
       <h2>Your subscriptions, used the way each company allows.</h2>
-      <p class="intro">Terminus never sees or stores your sign-in. Each agent signs in through its maker's own app, and Terminus follows each company's rules for apps like it.</p>
+      <p class="intro">Terminus never sees or stores your sign-in. Each agent signs in through its maker's own app on your computer, and Terminus follows each company's rules for apps like it. In a shared chat, each person's agents use that person's own plan.</p>
       <div class="cols">
         <div>
           <h3>Claude</h3>
